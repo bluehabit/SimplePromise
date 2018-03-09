@@ -1,0 +1,126 @@
+<script>
+
+class PromiseSimple {
+  constructor(callback) {
+    this.promiseChain = [];
+    this.handleError = function(){}
+
+    //user is apiResponse.data
+    this.onResolve = function(user) {
+      try {
+      //nextFunction is a callback, it holds a f definition
+      //and is called within the forEach
+      this.promiseChain.forEach(function(nextFunction){
+          user = nextFunction(user);
+          //setting user to whatever nextFunction returns
+          //setting user to whatever nextFunction returns
+		  //in most cases its the whole object, but in a 
+          //few instances its just the profile
+      });
+      } catch (error) {
+        this.promiseChain = [];
+        this.onReject(error);
+      }
+    }
+
+    this.onReject = function(error) {
+      //function that passes the error object
+      //to the handleError function
+      this.handleError(error);
+    }
+    //execute the function
+    callback(this.onResolve.bind(this), this.onReject.bind(this));
+  }
+
+  //prototype
+  //then builds the promiseCHAIN so we have to return this here
+  //ANY method you want to chain must end with return this
+  then(functionDefinition) {
+    this.promiseChain.push(functionDefinition);
+    return this;
+  }
+
+  catch(handleError) {
+    this.handleError = handleError;
+    return this;
+  }
+}
+// -------------end PromiseSimple class--------------
+
+function makeApiCall(){
+    return new PromiseSimple(function(resolve, reject){
+    setTimeout(function(){
+      //apiResponse becomes user parameter onResolve
+      var apiResponse = fakeApiBackend();
+
+      if (apiResponse.statusCode >= 400) {
+        reject(apiResponse);
+      } else {
+        //apiResponse user data passed to the onResolve function
+        //apiResponse.data is just the complete user object
+        resolve(apiResponse.data);
+      }
+    }, 1000)
+  });
+}
+
+function fakeApiBackend() {
+	//success object
+    var user = {
+    username: 'treyhuffine',
+    favoriteNumber: 42,
+    profile: 'https://gitconnected.com/treyhuffine'
+  }
+
+  if (Math.random() > .95) {
+    return { 
+      //data value set to success object
+      data: user, 
+      statusCode: 200,
+    };
+  } else {
+  	//error object
+    var error = {
+      statusCode: 404,
+      message: 'Could not find user',
+      error: 'Not Found',
+    };
+    
+    return error;
+  }
+};
+
+
+
+//makeApiCall returns a PromiseSimple object, and that
+//is what we are chaining .then on
+
+//then is pushing these function definitions into promiseChain
+makeApiCall()
+  //user is github profile data aka apiResponse.data
+  .then(function(user){
+  console.log('In the first .then()');
+    return user;
+  })
+  .then(function(user){
+    console.log(`User ${user.username}'s favorite number is ${user.favoriteNumber}`);
+    return user;
+  })
+  .then(function(user){
+    console.log('The previous .then() told you the favoriteNumber')
+    return user.profile;
+  })
+  .then(function(profile){
+    console.log(`The profile URL is ${profile}`);
+  })
+  .then(function(){
+    console.log('This is the last then()');
+  })
+  .catch(function(error){
+     console.log(error.message);
+})
+//remember functions RETURN everything that comes after it
+
+
+</script>
+

@@ -1,0 +1,106 @@
+<script>
+
+class PromiseSimple {
+  constructor(callback) {
+    this.promiseChain = [];
+    this.handleError = function(){}
+
+    this.onResolve = function(user) {
+      try {
+      //the promiseChain only gets built with onResolve
+      this.promiseChain.forEach(function(nextFunction){
+          user = nextFunction(user);
+      });
+      } catch (error) {
+        this.promiseChain = [];
+        this.onReject(error);
+      }
+    }
+
+    this.onReject = function(error) {
+      console.log('rejecst')
+      this.handleError(error);
+    }
+
+    callback(this.onResolve.bind(this), this.onReject.bind(this));
+  }
+
+  //prototype
+  then(functionDefinition) {
+    this.promiseChain.push(functionDefinition);
+    return this;
+  }
+
+  //catch grabs a callback function from our chain
+  catch(handleError) {
+    this.handleError = handleError;
+    return this;
+  }
+}
+// -------------end PromiseSimple class--------------
+
+function makeApiCall(){
+    return new PromiseSimple(function(resolve, reject){
+    setTimeout(function(){
+      var apiResponse = fakeApiBackend();
+
+      if (apiResponse.statusCode >= 400) {
+        reject(apiResponse);
+      } else {
+        resolve(apiResponse.data);
+      }
+    }, 2000)
+  });
+}
+
+function fakeApiBackend() {
+    var user = {
+    username: 'treyhuffine',
+    favoriteNumber: 42,
+    profile: 'https://gitconnected.com/treyhuffine'
+  }
+
+  if (Math.random() > .01) {
+    return { 
+      data: user, 
+      statusCode: 200,
+    };
+  } else {
+    var error = {
+      statusCode: 404,
+      message: 'Could not find user',
+      error: 'Not Found',
+    };
+    
+    return error;
+  }
+};
+
+var a = makeApiCall()
+  .then(function(user){
+  console.log('In the first .then()');
+    return user;
+  })
+  .then(function(user){
+    console.log(`User ${user.username}'s favorite number is ${user.favoriteNumber}`);
+    return user;
+  })
+  .then(function(user){
+    console.log('The previous .then() told you the favoriteNumber')
+    return user.profile;
+  })
+  .then(function(profile){
+    console.log(`The profile URL is ${profile}`);
+  })
+  .then(function(){
+    console.log('This is the last then()');
+  })
+  .catch(function(error){
+     console.log(error.message);
+})
+
+
+
+
+</script>
+
